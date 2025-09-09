@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Karides Avcısı</title>
+<style>
+  body { margin:0; background:#111; color:white; text-align:center; }
+  canvas { background:#222; display:block; margin:20px auto; border:3px solid #555; }
+</style>
+</head>
+<body>
+<h1>🧙 Karides Avcısı</h1>
+<p id="score">Skor: 0</p>
+<p id="time">Süre: 60</p>
+<canvas id="gameCanvas" width="480" height="320"></canvas>
+<script>
+const canvas=document.getElementById("gameCanvas");
+const ctx=canvas.getContext("2d");
+
+let keys=new Set();
+let score=0,timeLeft=60,gameRunning=true;
+
+let player={x:240,y:160,size:20,vx:0,vy:0};
+let shrimps=[];
+for(let i=0;i<5;i++) shrimps.push(createShrimp());
+
+document.addEventListener("keydown",e=>keys.add(e.key));
+document.addEventListener("keyup",e=>keys.delete(e.key));
+
+function beep(){
+  try{
+    const ac=new (window.AudioContext||window.webkitAudioContext)();
+    const osc=ac.createOscillator();
+    const gain=ac.createGain();
+    osc.connect(gain); gain.connect(ac.destination);
+    osc.type="square"; osc.frequency.value=600;
+    osc.start(); gain.gain.setValueAtTime(0.1,ac.currentTime);
+    osc.stop(ac.currentTime+0.1);
+  }catch(e){}
+}
+
+function createShrimp(){
+  return {x:Math.random()*440+20,y:Math.random()*300+10,size:15};
+}
+
+function handleInput(dt){
+  const speed=200;
+  let dx=0,dy=0;
+  if(keys.has("ArrowLeft")||keys.has("a")||keys.has("A")) dx=-1;
+  if(keys.has("ArrowRight")||keys.has("d")||keys.has("D")) dx=1;
+  if(keys.has("ArrowUp")||keys.has("w")||keys.has("W")) dy=-1;
+  if(keys.has("ArrowDown")||keys.has("s")||keys.has("S")) dy=1;
+  player.x+=dx*speed*dt;
+  player.y+=dy*speed*dt;
+  player.x=Math.max(0,Math.min(canvas.width,player.x));
+  player.y=Math.max(0,Math.min(canvas.height,player.y));
+}
+
+function update(dt){
+  handleInput(dt);
+  // çarpışma kontrol
+  for(let i=shrimps.length-1;i>=0;i--){
+    let s=shrimps[i];
+    if(Math.hypot(player.x-s.x,player.y-s.y)<player.size+s.size){
+      shrimps[i]=createShrimp();
+      score++; document.getElementById("score").textContent="Skor: "+score;
+      beep();
+    }
+  }
+  timeLeft-=dt;
+  if(timeLeft<=0){gameRunning=false; alert("Süre bitti! Skor: "+score);}
+  document.getElementById("time").textContent="Süre: "+Math.floor(timeLeft);
+}
+
+function draw(){
+  ctx.fillStyle="#222"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // büyücü (emoji olarak)
+  ctx.font="24px serif";
+  ctx.fillText("🧙",player.x-12,player.y+12);
+  // karidesler (emoji olarak)
+  for(let s of shrimps){
+    ctx.fillText("🦐",s.x-10,s.y+10);
+  }
+}
+
+let last=0;
+function loop(ts){
+  if(!gameRunning) return;
+  let dt=(ts-last)/1000; last=ts;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
